@@ -42,12 +42,17 @@ class Board {
         $this->pieces[$piece->color][$piece->type][] = $piece;
     }
     
-    private function getPieceAt($position, $color='') {
+    private function getPieceAt($position=null, $color=null, $type=null, $targetPosition=null, $take=null) {
         foreach($this->pieces as $piecesCol) {
             foreach($piecesCol as $pieces) {
                 foreach($pieces as $idx => $piece) {
-                    if($piece->position == $position && (empty($color) || $piece->color == $color)) {
-                        return [ $piece, $idx ];
+                    if(($position === null || $piece->position == $position) && ($color === null || $piece->color == $color) && ($type === null || $piece->type == $type)) {
+                        if($targetPosition === null) {
+                            return [ $piece, $idx ];
+                        } else if($piece->canMoveTo($targetPosition, $take)) {
+                            // Check if this piece can move to target
+                            return [ $piece, $idx ];
+                        }
                     }
                 }
             }
@@ -115,8 +120,13 @@ class Board {
                 echo "$color take: takes $oColor $piece->type [$idx]\n";
             }
             
+            list($piece,$idx) = $this->getPieceAt(null, $color, $type, $target, $take);
+            if(!$piece) {
+                throw new Exception('Unable to find piece to move');
+            }
+            
             echo "$color move: $type to $target\n";
-            $this->pieces[$color][$type][0]->position = 'c'.($color=='W'?1:8);
+            $this->pieces[$color][$type][$idx]->position = $target;
         }
         
         if($color == 'B') echo "\n";

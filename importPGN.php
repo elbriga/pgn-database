@@ -59,6 +59,8 @@ while($lin = fgets($fp)) {
             $board = new Board();
             foreach($moves as $move) {
                 $board->move($move);
+                $board->dumpState();
+echo "\n";
             }
 die();
             
