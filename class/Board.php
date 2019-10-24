@@ -44,6 +44,14 @@ class Board {
         $this->pieces[$piece->color][$piece->type][$piece->index] = $piece;
     }
     
+    private function removePiece(Piece $piece) {
+        unset($this->pieces[$piece->color][$piece->type][$piece->index]);
+    }
+    
+    private function movePiece(Piece $piece, $target) {
+        $this->pieces[$piece->color][$piece->type][$piece->index]->position = $target;
+    }
+    
     private function getPieceAt($position, $color=null) {
         if($color) {
             foreach($this->pieces[$color] as $pieces) {
@@ -86,11 +94,11 @@ class Board {
         if($tot == 1)  return $pieceAble[0];
         else if(!$tot) return null;
         else {
-            echo "--*******************>>> $tot pieces can move [$hint]!\n";
+            echo "--*******************>>> $tot pieces can move [h:$hint]!\n";
             $closer = 10;
             $tiePiece = null;
             foreach($pieceAble as $piece) {
-                echo "--*******************>>> $piece->type at $piece->position [$piece->distanceMoved]\n";
+                echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
                 
                 if(empty($hint)) {
                     // chose wich based on distance! rsrsrsrs
@@ -154,12 +162,12 @@ class Board {
                 
         if($move == 'O-O') {
             echo "[$origMove] $color move: Kingside castle\n";
-            $this->pieces[$color]['K'][0]->position = 'g'.($color=='W'?1:8);
-            $this->pieces[$color]['R'][1]->position = 'f'.($color=='W'?1:8);
+            $this->movePiece($this->pieces[$color]['K'][0], 'g'.($color=='W'?1:8));
+            $this->movePiece($this->pieces[$color]['R'][1], 'f'.($color=='W'?1:8));
         } else if($move == 'O-O-O') {
             echo "[$origMove] $color move: Queenside castle\n";
-            $this->pieces[$color]['K'][0]->position = 'c'.($color=='W'?1:8);
-            $this->pieces[$color]['R'][0]->position = 'd'.($color=='W'?1:8);
+            $this->movePiece($this->pieces[$color]['K'][0], 'c'.($color=='W'?1:8));
+            $this->movePiece($this->pieces[$color]['R'][0], 'd'.($color=='W'?1:8));
         } else {
             $take = !!strstr($move, 'x'); // Was a take?
             if($take) $move = str_replace('x', '', $move);
@@ -187,10 +195,10 @@ class Board {
             }
             
             echo "from $pieceMove->position to $target";
-            $this->pieces[$color][$type][$pieceMove->index]->position = $target;
+            $this->movePiece($pieceMove, $target);
             if($promote) {
                 echo " promoting to $promote";
-                unset($this->pieces[$pieceMove->color][$pieceMove->type][$pieceMove->index]);
+                $this->removePiece($pieceMove);
                 
                 $pieceMove->type = $promote;
                 $this->addPiece($pieceMove);
@@ -219,8 +227,8 @@ class Board {
                     }
                 }
                 
-                unset($this->pieces[$oColor][$pieceTake->type][$pieceTake->index]);
-                echo "$pieceTake->type [$pieceTake->index]$enPassant";
+                $this->removePiece($pieceTake);
+                echo "$pieceTake->type [i:$pieceTake->index]$enPassant";
             }
             echo "$check$mate\n";
         }
