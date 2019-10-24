@@ -189,6 +189,8 @@ class Board {
                     $type = 'P';
                 } else if($lMove == 4) {
                     $from = $move[1];
+                } else if($lMove == 5) {
+                    $from = $move[1].$move[2];
                 }
             }
             
