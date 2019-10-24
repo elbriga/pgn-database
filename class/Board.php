@@ -140,9 +140,18 @@ class Board {
     private function __move($color, $move) {
         $origMove = $move;
         
-        if(substr($move,-1) == '+') $move = substr($move,0,-1); // Remove 'check's
-        if(substr($move,-1) == '#') $move = substr($move,0,-1); // Remove 'mate's
+        $check = (substr($move,-1) == '+') ? ' CHECK'      : '';
+        $mate  = (substr($move,-1) == '#') ? ' CHECKMATE!' : '';
         
+        if($check || $mate) $move = substr($move,0,-1); // Remove 'check's
+        
+        // promotions
+        $promote = '';
+        if(substr($move, -2, 1) == '=') {
+            $promote = substr($move,-1);
+            $move = substr($move,0,-2); // Remove '=X'
+        }
+                
         if($move == 'O-O') {
             echo "[$origMove] $color move: Kingside castle\n";
             $this->pieces[$color]['K'][0]->position = 'g'.($color=='W'?1:8);
@@ -170,28 +179,50 @@ class Board {
                 }
             }
             
-            echo "[$origMove] $color move: $type to $target ";
-            if($take) {
-                // Remove opponents piece
-                $oColor = ($color=='W') ? 'B' : 'W';
-                echo "taking $oColor ";
-                
-                $piece = $this->getPieceAt($target, $oColor);
-                if(!$piece) {
-                    throw new Exception('Unable to find piece on target of taking');
-                }
-                
-                unset($this->pieces[$oColor][$piece->type][$piece->index]);
-                echo "$piece->type [$piece->index]";
-            }
-            echo "\n";
+            echo "[$origMove] $color move: $type ";
             
-            $piece = $this->getPieceToMove($color, $type, $target, $take, $from);
-            if(!$piece) {
+            $pieceMove = $this->getPieceToMove($color, $type, $target, $take, $from);
+            if(!$pieceMove) {
                 throw new Exception('Unable to find piece to move');
             }
             
-            $this->pieces[$color][$type][$piece->index]->position = $target;
+            echo "from $pieceMove->position to $target";
+            $this->pieces[$color][$type][$pieceMove->index]->position = $target;
+            if($promote) {
+                echo " promoting to $promote";
+                unset($this->pieces[$pieceMove->color][$pieceMove->type][$pieceMove->index]);
+                
+                $pieceMove->type = $promote;
+                $this->addPiece($pieceMove);
+            }
+            
+            if($take) {
+                // Remove opponents piece
+                $oColor = ($color=='W') ? 'B' : 'W';
+                echo " taking $oColor ";
+                
+                $enPassant = '';
+                $pieceTake = $this->getPieceAt($target, $oColor);
+                if(!$pieceTake) {
+                    // Check for en passant
+                    if($pieceMove->type == 'P') {
+                        if($pieceMove->color == 'W' && $pieceMove->position[1] == '6') {
+                            $pieceTake = $this->getPieceAt($target[0].'5', $oColor);
+                        } else if($pieceMove->color == 'B' && $pieceMove->position[1] == '3') {
+                            $pieceTake = $this->getPieceAt($target[0].'4', $oColor);
+                        }
+                        $enPassant = ' en passant';
+                    }
+                    
+                    if(!$pieceTake) {
+                        throw new Exception('Unable to find piece on target of taking');
+                    }
+                }
+                
+                unset($this->pieces[$oColor][$pieceTake->type][$pieceTake->index]);
+                echo "$pieceTake->type [$pieceTake->index]$enPassant";
+            }
+            echo "$check$mate\n";
         }
         
         //if($color == 'B') echo "\n";
