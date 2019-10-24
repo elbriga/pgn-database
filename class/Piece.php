@@ -95,8 +95,22 @@ class Piece {
                 break;
 
             case 'Q': // Queen
-                // TODO : calc distance moved
-                return 2;
+                for($step=1; $step<8; $step++) {
+                    if(
+                        ($this->position == self::asciisum($col, -1*$step) . ($row - $step)) || // Diagonal
+                        ($this->position == self::asciisum($col,    $step) . ($row - $step)) ||
+                        ($this->position == self::asciisum($col,    $step) . ($row + $step)) ||
+                        ($this->position == self::asciisum($col, -1*$step) . ($row + $step)) ||
+                        
+                        ($this->position == $col . ($row + $step)) || // Vertical
+                        ($this->position == $col . ($row - $step)) ||
+                        ($this->position == self::asciisum($col,    $step) . $row) || // Horizontal
+                        ($this->position == self::asciisum($col, -1*$step) . $row)
+                        ) {
+                            return $step;
+                        }
+                }
+                break;
 
             case 'K': // There is only one!
                 return 1;
