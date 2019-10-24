@@ -42,7 +42,7 @@ class Board {
         $this->pieces[$piece->color][$piece->type][$piece->index] = $piece;
     }
     
-    private function removePiece(Piece $piece) {
+    public function removePiece(Piece $piece) {
         unset($this->pieces[$piece->color][$piece->type][$piece->index]);
     }
     
@@ -93,37 +93,60 @@ class Board {
             return $pieceAble[0];
         } else if(!$tot) {
             throw new Exception('Unable to find piece to move 1');
-        } else {
-            if($debug) echo "\n--*******************>>> $tot pieces can move [h:$hint]!\n";
-
-            $tiePiece = [];
-            foreach($pieceAble as $piece) {
-                if($debug) echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
-                
-                if(empty($hint)) {
-                    // Choose wich seeing if there are other pieces on the way
-                    if($piece->canMoveThrought($targetPosition, $this)) {
-                        $tiePiece[] = $piece;
-                    }
-                } else if(strstr($piece->position, $hint)) {
-                    $tiePiece[] = $piece;
-                } else {
-                    //throw new Exception('???? PGN invalido?');
-                }
-            }
-            
-            $totTiePieces = count($tiePiece);
-            if($totTiePieces === 1) {
-                if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
-                return $tiePiece[0];
-            } else if(!$totTiePieces) {
-                throw new Exception('Unable to find piece to move 2');
-            }
-            
-            // TODO :: check for pinned pieces
-            throw new Exception('2 pieces can move!', 10);
-            if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
         }
+        
+        
+        
+        if($debug) echo "\n--*******************>>> $tot pieces can move [h:$hint]!\n";
+
+        // check for pieces on the way
+        $canMove = [];
+        foreach($pieceAble as $piece) {
+            if($debug) echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
+            
+            if(empty($hint)) {
+                // Choose wich seeing if there are other pieces on the way
+                if($piece->canMoveThrought($targetPosition, $this)) {
+                    $canMove[] = $piece;
+                }
+            } else if(strstr($piece->position, $hint)) {
+                $canMove[] = $piece;
+            } else {
+                //throw new Exception('???? PGN invalido?');
+            }
+        }
+        
+        $totCanMovePieces = count($canMove);
+        if($totCanMovePieces === 1) {
+            $tiePiece = $canMove[0];
+            if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
+            return $tiePiece;
+        } else if(!$totCanMovePieces) {
+            throw new Exception('Unable to find piece to move 2');
+        }
+        
+        
+        
+        // check for pinned pieces
+        $notPinned = [];
+        foreach($canMove as $piece) {
+            if($debug) echo "--*******************>>> $piece->type at $piece->position is pinned?\n";
+            
+            if(!$piece->isPinned($this)) {
+                $notPinned[] = $piece;
+            }
+        }
+        
+        $totNotPinnedPieces = count($notPinned);
+        if($totNotPinnedPieces === 1) {
+            $tiePiece = $totNotPinnedPieces[0];
+            if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position unpinned\n";
+            return $tiePiece;
+        } else if(!$totNotPinnedPieces) {
+            throw new Exception('Unable to find piece to move 3');
+        }
+        
+        throw new Exception($totNotPinnedPieces.' pieces can move!', 10);
     }
     
     public function dumpState() {
@@ -157,9 +180,11 @@ class Board {
     private function __move($color, $move, $debug) {
         $origMove = $move;
         
+        // Remove possible old notations
+        $move = str_replace('e.p.', '', $move); // en passant
+        
         $check = (substr($move,-1) == '+') ? ' CHECK'      : '';
         $mate  = (substr($move,-1) == '#') ? ' CHECKMATE!' : '';
-        
         if($check || $mate) $move = substr($move,0,-1); // Remove 'check's
         
         // promotions
@@ -170,11 +195,11 @@ class Board {
         }
                 
         if($move == 'O-O') {
-            if($debug) echo "[$origMove] $color move: Kingside castle\n";
+            if($debug) echo "[$origMove] $color move: Kingside castling\n";
             $this->movePiece($this->pieces[$color]['K'][0], 'g'.($color=='W'?1:8));
             $this->movePiece($this->pieces[$color]['R'][1], 'f'.($color=='W'?1:8));
         } else if($move == 'O-O-O') {
-            if($debug) echo "[$origMove] $color move: Queenside castle\n";
+            if($debug) echo "[$origMove] $color move: Queenside castling\n";
             $this->movePiece($this->pieces[$color]['K'][0], 'c'.($color=='W'?1:8));
             $this->movePiece($this->pieces[$color]['R'][0], 'd'.($color=='W'?1:8));
         } else {
@@ -240,5 +265,16 @@ class Board {
             }
             if($debug) echo "$check$mate\n";
         }
+    }
+    
+    /**
+     * Calculate how many pieces are checking the $color King
+     * @param string $color
+     */
+    public function totalChecks($color) {
+        $otherColor = ($color == 'W') ? 'B' : 'W';
+        
+        // TODO!
+        return 0;
     }
 }

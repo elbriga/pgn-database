@@ -171,4 +171,24 @@ class Piece {
         
         return false;
     }
+    
+    /**
+     * check if this piece is pinned protecting the King
+     * @param Board $board
+     * @return boolean
+     */
+    public function isPinned(Board $board) {
+        $otherColor = ($this->color == 'W') ? 'B' : 'W';
+        
+        // Calculate total checks WITH the piece on the board
+        $totChecksW = $board->totalChecks($otherColor);
+        
+        // Calculate total checks WITHOUT the piece on the board
+        $boardAux = clone $board;
+        $boardAux->removePiece($this);
+        $totChecksWO = $boardAux->totalChecks($otherColor)                            + 1; // TODO!
+        
+        // if totWO > totW the piece is pinned!
+        return ($totChecksWO > $totChecksW);
+    }
 }
