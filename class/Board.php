@@ -139,6 +139,7 @@ class Board {
             }
             echo "\n";
         }
+        echo "\n";
     }
     
     public function move($move) {

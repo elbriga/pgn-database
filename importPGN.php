@@ -2,6 +2,8 @@
 include('class/Piece.php');
 include('class/Board.php');
 
+$argv = $GLOBALS['argv'];
+
 if(!isset($argv[1]) || empty($argv[1]) || !file_exists($argv[1])) {
     echo "Use: importPGN <File.pgn>\n\n";
     exit(1);
@@ -66,7 +68,6 @@ while($lin = fgets($fp)) {
                 foreach($moves as $move) {
                     $board->move($move);
                     $board->dumpState();
-echo "\n";
                 }
             } catch(Exception $e) {
                 echo "\n\n============================================================\n$e\n\n";
