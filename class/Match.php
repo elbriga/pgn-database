@@ -25,7 +25,7 @@ class Match {
         if(empty($this->whiteelo)) $this->whiteelo = 0;
         if(empty($this->blackelo)) $this->blackelo = 0;
         
-        $this->moves  = $moves;
+        $this->moves  = trim($moves);
         $this->states = [];
     }
     
@@ -61,7 +61,7 @@ class Match {
     }
     
     public function getInsertSQL() {
-        $sql  = "INSERT INTO match(pgn,".implode(',', $this->headersToSave).") VALUES ('".trim($this->moves)."','";
+        $sql  = "INSERT INTO match(moves,".implode(',', $this->headersToSave).") VALUES ('$this->moves','";
         $vals = [];
         foreach($this->headersToSave as $atrName) {
             $vals[] = $this->$atrName;
