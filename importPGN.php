@@ -15,10 +15,12 @@ if(!isset($argv[1]) || empty($argv[1]) || !file_exists($argv[1])) {
 $debug    = !isset($argv[2]) ? 0 : ($argv[2]=='BD' ? true : $argv[2]+0);
 $doImport = (isset($argv[3]) && $argv[3]=='IMP');
 
-$conn = pg_connect("host=vm dbname=chess user=sa_chess password=1234");
-if(!$conn) {
-    echo "Error connecting to BD\n\n";
-    exit(2);
+if($doImport) {
+    $conn = pg_connect("host=vm dbname=chess user=sa_chess password=1234");
+    if(!$conn) {
+        echo "Error connecting to BD\n\n";
+        exit(2);
+    }
 }
 
 // Load PGN
@@ -26,7 +28,7 @@ $pgn = new PGN($argv[1]);
 
 // Parse PGN
 $matches = $pgn->loadMatches();
-echo "Importing ".count($matches)." matches\n\n";
+echo ($doImport ? "Importing " : 'Checking ').count($matches)." matches\n\n";
 
 // Importing
 $numMatch = 0;
