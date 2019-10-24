@@ -19,6 +19,9 @@ $strHeadersToSave = implode(',', $headersToSave);
 $state = 0;
 $heads = [];
 $match = '';
+$numMatch = 0;
+$numErro  = 0;
+
 while($lin = fgets($fp)) {
     if($lin == "\n" || $lin == "\r\n") {
         // blank line
@@ -32,6 +35,8 @@ while($lin = fgets($fp)) {
                 continue;
             }
             
+            $numMatch++;
+            
             if(strstr($heads['result'], '1/2')) $heads['result'] = 0;
             else if($heads['result'] == '1-0')  $heads['result'] = 1;
             else if($heads['result'] == '0-1')  $heads['result'] = 2;
@@ -44,7 +49,7 @@ while($lin = fgets($fp)) {
             }
             $sql .= implode("','", $vals) . "') RETURNING id";
             
-            echo "$sql\n";
+            echo "-- Match #$numMatch\n\n$sql\n\n";
             
             // Proccess PGN
             $moves  = array_filter(explode(' ', $match));
@@ -56,13 +61,19 @@ while($lin = fgets($fp)) {
                 continue;
             }
             
-            $board = new Board();
-            foreach($moves as $move) {
-                $board->move($move);
-                $board->dumpState();
+            try {
+                $board = new Board();
+                foreach($moves as $move) {
+                    $board->move($move);
+                    $board->dumpState();
 echo "\n";
+                }
+            } catch(Exception $e) {
+                echo "\n\n============================================================\n$e\n\n";
+                if($numErro++ > 1) {
+                    die('!!!');
+                }
             }
-die();
             
             $match = '';
             $heads = [];

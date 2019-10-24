@@ -98,8 +98,10 @@ class Board {
                         $tiePiece = $piece;
                         $closer   = $piece->distanceMoved;
                     }
-                } else if($piece->position[0] == $hint) {
+                } else if(strstr($piece->position, $hint)) {
                     $tiePiece = $piece;
+                } else {
+                    // ???? PGN invalido?
                 }
             }
             
@@ -168,9 +170,11 @@ class Board {
                 }
             }
             
+            echo "[$origMove] $color move: $type to $target ";
             if($take) {
                 // Remove opponents piece
                 $oColor = ($color=='W') ? 'B' : 'W';
+                echo "taking $oColor ";
                 
                 $piece = $this->getPieceAt($target, $oColor);
                 if(!$piece) {
@@ -178,10 +182,10 @@ class Board {
                 }
                 
                 unset($this->pieces[$oColor][$piece->type][$piece->index]);
-                $take = "taking $oColor $piece->type [$piece->index]\n";
+                echo "$piece->type [$piece->index]";
             }
-
-            echo "[$origMove] $color move: $type to $target $take\n";
+            echo "\n";
+            
             $piece = $this->getPieceToMove($color, $type, $target, $take, $from);
             if(!$piece) {
                 throw new Exception('Unable to find piece to move');
@@ -190,6 +194,6 @@ class Board {
             $this->pieces[$color][$type][$piece->index]->position = $target;
         }
         
-        if($color == 'B') echo "\n";
+        //if($color == 'B') echo "\n";
     }
 }
