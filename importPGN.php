@@ -1,97 +1,75 @@
 <?php
+include('class/State.php');
+include('class/Match.php');
 include('class/Piece.php');
 include('class/Board.php');
+include('class/PGN.php');
 
+// Command line
 $argv = $GLOBALS['argv'];
-
 if(!isset($argv[1]) || empty($argv[1]) || !file_exists($argv[1])) {
     echo "Use: importPGN <File.pgn>\n\n";
     exit(1);
 }
+$debug = !isset($argv[2]) ? 0 : ($argv[2]=='BD' ? 2 : 1);
 
-$fp = fopen($argv[1], 'r');
-if(!$fp) {
-    echo "File $argv[1] not found!\n\n";
+$conn = @pg_connect("host=vm dbname=chess user=sa_chess password=1234");
+if(!$conn) {
+    echo "Error connecting to BD\n\n";
     exit(2);
 }
 
-$headersToSave    = ['event', 'site', 'white', 'black', 'result', 'whiteelo', 'blackelo'];
-$strHeadersToSave = implode(',', $headersToSave);
+// Load PGN
+$pgn = new PGN($argv[1]);
 
-$state = 0;
-$heads = [];
-$match = '';
+// Parse PGN
+$matches = $pgn->loadMatches();
+echo "Importing ".count($matches)." matches\n\n";
+
+// Importing
 $numMatch = 0;
-$numErro  = 0;
-
-while($lin = fgets($fp)) {
-    if($lin == "\n" || $lin == "\r\n") {
-        // blank line
-        $state = 1 - $state;
-        if(!$state) {
-            // Save match
-            if(!isset($heads['result'])) {
-                echo "-- Match withou result!\n";
-                $match = '';
-                $heads = [];
-                continue;
-            }
-            
-            $numMatch++;
-            
-            if(strstr($heads['result'], '1/2')) $heads['result'] = 0;
-            else if($heads['result'] == '1-0')  $heads['result'] = 1;
-            else if($heads['result'] == '0-1')  $heads['result'] = 2;
-            else                                $heads['result'] = 3;
-            
-            $sql  = "INSERT INTO match(pgn,$strHeadersToSave) VALUES ('".substr($match,0,-1)."','";
-            $vals = [];
-            foreach($headersToSave as $head) {
-                $vals[] = isset($heads[$head]) ? $heads[$head] : '';
-            }
-            $sql .= implode("','", $vals) . "') RETURNING id";
-            
-            echo "-- Match #$numMatch\n\n$sql\n\n";
-            
-            // Proccess PGN
-            $moves  = array_filter(explode(' ', $match));
-            $result = array_pop($moves);
-            if(strstr($result, '.')) {
-                echo "-- Match withou result!\n";
-                $match = '';
-                $heads = [];
-                continue;
-            }
-            
-            try {
-                $board = new Board();
-                foreach($moves as $move) {
-                    $board->move($move);
-                    $board->dumpState();
-                }
-            } catch(Exception $e) {
-                echo "\n\n============================================================\n$e\n\n";
-                if($e->getCode() != 10) {
-                    if($numErro++ >= 0) {
-                        die('!!!');
-                    }
-                    sleep(1);
-                }
-            }
-            
-            /*if($numMatch >= 49) {
-                die('***');
-            }*/
-            
-            $match = '';
-            $heads = [];
-        }
-    } else if(!$state) {
-        // header
-        list($ch,$vl) = explode('"', $lin);
-        $heads[substr(strtolower($ch), 1, -1)] = $vl;
-    } else {
-        // match
-        $match .= str_replace(["\r", "\n"], '', $lin) . ' ';
+while(($match = array_shift($matches))) {
+    $numMatch++;
+    
+    try {
+        $match->play($debug);
+    } catch(Exception $e) {
+        echo "-- !!! Skiping Match $numMatch :: ".$e->getMessage()." :: !!!\n";
+        continue;
     }
+    
+    // Check if is duplicate
+    if($match->existsOnDB($conn)) {
+        echo "-- !!! Skiping Match $numMatch :: Already one like this on DB :: !!!\n";
+        continue;
+    }
+    
+    echo "-- Importing Match $numMatch :: ".$match->getTotalMoves()." moves: ";
+    pg_query($conn, 'BEGIN');
+    
+    $sqlMatch = $match->getInsertSQL();
+    if($debug == 2) echo "SQLmatch: $sqlMatch\n";
+    $res = pg_query($conn, $sqlMatch . ' RETURNING id');
+    if(!$res) {
+        echo "-- !!! Skiping Match $numMatch :: DB failure :: !!!\n";
+        pg_query($conn, 'ROLLBACK');
+        continue;
+    }
+    $idMatchBD = pg_fetch_array($res)[0];
+    
+    foreach($match->getStates() as $state) {
+        $sqlState = $state->getInsertSQL($idMatchBD);
+        if($debug == 2) echo "SQLstate: $sqlState\n";
+        $res = pg_query($conn, $sqlState);
+        if(!$res) {
+            echo "-- !!! Skiping Match $numMatch :: DB failure 2 :: !!!\n";
+            pg_query($conn, 'ROLLBACK');
+            continue 2;
+        }
+    }
+    
+    echo "OK!\n";
+    pg_query($conn, 'COMMIT');
 }
+
+exit(0);

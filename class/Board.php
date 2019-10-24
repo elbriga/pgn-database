@@ -34,8 +34,6 @@ class Board {
         // Kings
         $this->addPiece(new Piece('W', 'K', 'e1'));
         $this->addPiece(new Piece('B', 'K', 'e8'));
-
-        $this->dumpState();
     }
     
     private function addPiece(Piece $piece) {
@@ -76,7 +74,7 @@ class Board {
         return null;
     }
     
-    private function getPieceToMove($color, $type, $targetPosition, $taking, $hint) {
+    private function getPieceToMove($color, $type, $targetPosition, $taking, $hint, $debug=false) {
         if(count($this->pieces[$color][$type]) === 1) {
             // there is only one!
             return $this->pieces[$color][$type][  array_keys($this->pieces[$color][$type])[0]  ];
@@ -94,11 +92,11 @@ class Board {
         if($tot == 1)  return $pieceAble[0];
         else if(!$tot) return null;
         else {
-            echo "\n--*******************>>> $tot pieces can move [h:$hint]!\n";
+            if($debug) echo "\n--*******************>>> $tot pieces can move [h:$hint]!\n";
 
             $tiePiece = null;
             foreach($pieceAble as $piece) {
-                echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
+                if($debug) echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
                 
                 if(empty($hint)) {
                     // Choose wich seeing if there are other pieces on the way
@@ -112,12 +110,12 @@ class Board {
                 } else if(strstr($piece->position, $hint)) {
                     $tiePiece = $piece;
                 } else {
-                    // ???? PGN invalido?
+                    //throw new Exception('???? PGN invalido?');
                 }
             }
             
             if($tiePiece) {
-                echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
+                if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
             }
             
             return $tiePiece;
@@ -125,6 +123,7 @@ class Board {
     }
     
     public function dumpState() {
+        $state = '';
         for($row=8; $row>0; $row--) {
             for($col='a'; $col<='h'; $col++) {
                 $piece = $this->getPieceAt($col.$row);
@@ -135,24 +134,23 @@ class Board {
                 } else {
                     $char = $piece->type;
                 }
-                echo $char;
+                $state .= $char;
             }
-            echo "\n";
         }
-        echo "\n";
+        return $state;
     }
     
-    public function move($move) {
+    public function move($move, $debug) {
         if(strstr($move, '.')) {
             // White move
-            $this->__move('W', explode('.', $move)[1]);
+            $this->__move('W', explode('.', $move)[1], $debug);
         } else {
             // Black move
-            $this->__move('B', $move);
+            $this->__move('B', $move, $debug);
         }
     }
     
-    private function __move($color, $move) {
+    private function __move($color, $move, $debug) {
         $origMove = $move;
         
         $check = (substr($move,-1) == '+') ? ' CHECK'      : '';
@@ -168,11 +166,11 @@ class Board {
         }
                 
         if($move == 'O-O') {
-            echo "[$origMove] $color move: Kingside castle\n";
+            if($debug) echo "[$origMove] $color move: Kingside castle\n";
             $this->movePiece($this->pieces[$color]['K'][0], 'g'.($color=='W'?1:8));
             $this->movePiece($this->pieces[$color]['R'][1], 'f'.($color=='W'?1:8));
         } else if($move == 'O-O-O') {
-            echo "[$origMove] $color move: Queenside castle\n";
+            if($debug) echo "[$origMove] $color move: Queenside castle\n";
             $this->movePiece($this->pieces[$color]['K'][0], 'c'.($color=='W'?1:8));
             $this->movePiece($this->pieces[$color]['R'][0], 'd'.($color=='W'?1:8));
         } else {
@@ -194,17 +192,17 @@ class Board {
                 }
             }
             
-            echo "[$origMove] $color move: $type ";
+            if($debug) echo "[$origMove] $color move: $type ";
             
-            $pieceMove = $this->getPieceToMove($color, $type, $target, $take, $from);
+            $pieceMove = $this->getPieceToMove($color, $type, $target, $take, $from, $debug);
             if(!$pieceMove) {
                 throw new Exception('Unable to find piece to move');
             }
             
-            echo "from $pieceMove->position to $target";
+            if($debug) echo "from $pieceMove->position to $target";
             $this->movePiece($pieceMove, $target);
             if($promote) {
-                echo " promoting to $promote";
+                if($debug) echo " promoting to $promote";
                 $this->removePiece($pieceMove);
                 
                 $pieceMove->type = $promote;
@@ -214,7 +212,7 @@ class Board {
             if($take) {
                 // Remove opponents piece
                 $oColor = ($color=='W') ? 'B' : 'W';
-                echo " taking $oColor ";
+                if($debug) echo " taking $oColor ";
                 
                 $enPassant = '';
                 $pieceTake = $this->getPieceAt($target, $oColor);
@@ -235,11 +233,9 @@ class Board {
                 }
                 
                 $this->removePiece($pieceTake);
-                echo "$pieceTake->type [i:$pieceTake->index]$enPassant";
+                if($debug) echo "$pieceTake->type [i:$pieceTake->index]$enPassant";
             }
-            echo "$check$mate\n";
+            if($debug) echo "$check$mate\n";
         }
-        
-        //if($color == 'B') echo "\n";
     }
 }

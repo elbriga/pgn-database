@@ -1,7 +1,7 @@
 
-CREATE TABLE match {
-	id       serial,
-	pgn      text,
+CREATE TABLE match (
+	id       serial PRIMARY KEY,
+	moves    text,
 	event    text,
 	site     text,
 	white    text,
@@ -9,10 +9,11 @@ CREATE TABLE match {
 	result   integer, -- 0=tie, 1=white, 2=black, 3=others
 	whiteelo smallint,
 	blackelo smallint
-}
+);
 
-CREATE TABLE board {
-	idmatch integer REFERENCES match(id),
-	move    smallint, -- seq: 1,2,11,12,21,22,31,32,...
-	state   bytea
-}
+CREATE TABLE boardstate (
+	idmatch  integer REFERENCES match(id),
+	nummove  smallint, -- seq: 11,12,21,22,31,32,...
+	origmove text,
+	state    text
+);
