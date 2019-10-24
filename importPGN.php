@@ -70,10 +70,17 @@ echo "\n";
                 }
             } catch(Exception $e) {
                 echo "\n\n============================================================\n$e\n\n";
-                if($numErro++ > 1) {
-                    die('!!!');
+                if($e->getCode() != 10) {
+                    if($numErro++ >= 0) {
+                        die('!!!');
+                    }
+                    sleep(1);
                 }
             }
+            
+            /*if($numMatch >= 49) {
+                die('***');
+            }*/
             
             $match = '';
             $heads = [];

@@ -19,7 +19,7 @@ class Piece {
      * check if this piece can move to $targetPosition
      * @param string $targetPosition
      * @param boolean $taking - the move is a taking! X
-     * @return number distance moved (0 = cant move!)
+     * @return integer distance moved (0 = cant move!)
      */
     public function canMoveTo($targetPosition, $taking) {
         return ($this->distanceMoved = $this->__canMoveTo($targetPosition, $taking));
@@ -28,11 +28,8 @@ class Piece {
     private function __canMoveTo($targetPosition, $taking) {
         $col = $targetPosition[0]; // leter
         $row = $targetPosition[1]; // number
-        switch($this->type) {
-            case 'Q':
-            case 'K': // There is only one!
-                return 1;
 
+        switch($this->type) {
             case 'P': // Pawn
                 $direction = ($this->color == 'W') ? -1 : 1;
                 if($taking) {
@@ -96,8 +93,68 @@ class Piece {
                         }
                 }
                 break;
+
+            case 'Q': // Queen
+                // TODO : calc distance moved
+                return 2;
+
+            case 'K': // There is only one!
+                return 1;
         }
         
         return 0;
+    }
+    
+    /**
+     * check if there is no pieces on the way
+     * assumes that 'canMoveTo' has already been called
+     * (uses 'distanceMoved' setted there)
+     * @param string $targetPosition
+     * @param Board $board
+     * @return boolean
+     */
+    public function canMoveThrought($targetPosition, Board $board) {
+        $col = $targetPosition[0]; // leter
+        $row = $targetPosition[1]; // number
+
+        switch($this->type) {
+            case 'N': // kNight
+            case 'K': // King
+                return true;
+
+            case 'P': // Pawn
+                return ($this->distanceMoved === 1);
+                
+            case 'B': // Bishop
+                if($this->distanceMoved === 1) return true;
+                break;
+                
+            case 'R': // Rook
+                if($this->distanceMoved === 1) return true;
+                if($this->position[0] == $col) {
+                    // Moving vertically
+                    $step = ($row > $this->position[1]) ? 1 : -1;
+                    for($r=$this->position[1]+$step; $r!=$row; $r += $step) {
+                        if($board->getPieceAt($col . $r)) {
+                            return false;
+                        }
+                    }
+                } else {
+                    // Moving horizontally
+                    $step = ($col > $this->position[0]) ? 1 : -1;
+                    for($c=self::asciisum($this->position[0], $step); $c!=$col; $c = self::asciisum($c, $step)) {
+                        if($board->getPieceAt($c . $row)) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+                
+            case 'Q': // Queen
+                if($this->distanceMoved === 1) return true; // TODO
+                break;
+        }
+        
+        return false;
     }
 }

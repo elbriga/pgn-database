@@ -52,7 +52,7 @@ class Board {
         $this->pieces[$piece->color][$piece->type][$piece->index]->position = $target;
     }
     
-    private function getPieceAt($position, $color=null) {
+    public function getPieceAt($position, $color=null) {
         if($color) {
             foreach($this->pieces[$color] as $pieces) {
                 foreach($pieces as $piece) {
@@ -94,17 +94,20 @@ class Board {
         if($tot == 1)  return $pieceAble[0];
         else if(!$tot) return null;
         else {
-            echo "--*******************>>> $tot pieces can move [h:$hint]!\n";
-            $closer = 10;
+            echo "\n--*******************>>> $tot pieces can move [h:$hint]!\n";
+
             $tiePiece = null;
             foreach($pieceAble as $piece) {
                 echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
                 
                 if(empty($hint)) {
-                    // chose wich based on distance! rsrsrsrs
-                    if($piece->distanceMoved < $closer) {
+                    // Choose wich seeing if there are other pieces on the way
+                    if($piece->canMoveThrought($targetPosition, $this)) {
+                        if($tiePiece) {
+                            // TODO :: check for pinned pieces
+                            throw new Exception('2 pieces can move!', 10);
+                        }
                         $tiePiece = $piece;
-                        $closer   = $piece->distanceMoved;
                     }
                 } else if(strstr($piece->position, $hint)) {
                     $tiePiece = $piece;
@@ -113,7 +116,10 @@ class Board {
                 }
             }
             
-            echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
+            if($tiePiece) {
+                echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
+            }
+            
             return $tiePiece;
         }
     }
