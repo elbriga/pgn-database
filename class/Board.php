@@ -39,31 +39,79 @@ class Board {
     }
     
     private function addPiece(Piece $piece) {
-        $this->pieces[$piece->color][$piece->type][] = $piece;
+        $piece->index = @count($this->pieces[$piece->color][$piece->type]);
+        
+        $this->pieces[$piece->color][$piece->type][$piece->index] = $piece;
     }
     
-    private function getPieceAt($position=null, $color=null, $type=null, $targetPosition=null, $take=null) {
+    private function getPieceAt($position, $color=null) {
+        if($color) {
+            foreach($this->pieces[$color] as $pieces) {
+                foreach($pieces as $piece) {
+                    if($piece->position == $position) {
+                        return $piece;
+                    }
+                }
+            }
+            return null;
+        }
+        
         foreach($this->pieces as $piecesCol) {
             foreach($piecesCol as $pieces) {
-                foreach($pieces as $idx => $piece) {
-                    if(($position === null || $piece->position == $position) && ($color === null || $piece->color == $color) && ($type === null || $piece->type == $type)) {
-                        if($targetPosition === null) {
-                            return [ $piece, $idx ];
-                        } else if($piece->canMoveTo($targetPosition, $take)) {
-                            // Check if this piece can move to target
-                            return [ $piece, $idx ];
-                        }
+                foreach($pieces as $piece) {
+                    if($piece->position == $position) {
+                        return $piece;
                     }
                 }
             }
         }
-        return [null, null];
+        return null;
+    }
+    
+    private function getPieceToMove($color, $type, $targetPosition, $taking, $hint) {
+        if(count($this->pieces[$color][$type]) === 1) {
+            // there is only one!
+            return $this->pieces[$color][$type][  array_keys($this->pieces[$color][$type])[0]  ];
+        }
+        
+        $pieceAble = [];
+        foreach($this->pieces[$color][$type] as $piece) {
+            if($piece->canMoveTo($targetPosition, $taking) > 0) {
+                // Check if this piece can move to target
+                $pieceAble[] = $piece;
+            }
+        }
+        
+        $tot = count($pieceAble);
+        if($tot == 1)  return $pieceAble[0];
+        else if(!$tot) return null;
+        else {
+            echo "--*******************>>> $tot pieces can move [$hint]!\n";
+            $closer = 10;
+            $tiePiece = null;
+            foreach($pieceAble as $piece) {
+                echo "--*******************>>> $piece->type at $piece->position [$piece->distanceMoved]\n";
+                
+                if(empty($hint)) {
+                    // chose wich based on distance! rsrsrsrs
+                    if($piece->distanceMoved < $closer) {
+                        $tiePiece = $piece;
+                        $closer   = $piece->distanceMoved;
+                    }
+                } else if($piece->position[0] == $hint) {
+                    $tiePiece = $piece;
+                }
+            }
+            
+            echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
+            return $tiePiece;
+        }
     }
     
     public function dumpState() {
-        for($row=1; $row<=8; $row++) {
+        for($row=8; $row>0; $row--) {
             for($col='a'; $col<='h'; $col++) {
-                $piece = $this->getPieceAt($col.$row)[0];
+                $piece = $this->getPieceAt($col.$row);
                 if(!$piece) {
                     $char = '#';
                 } else if($piece->color == 'B') {
@@ -88,45 +136,58 @@ class Board {
     }
     
     private function __move($color, $move) {
+        $origMove = $move;
+        
         if(substr($move,-1) == '+') $move = substr($move,0,-1); // Remove 'check's
         if(substr($move,-1) == '#') $move = substr($move,0,-1); // Remove 'mate's
         
         if($move == 'O-O') {
-            echo "$color move: Kingside castle\n";
+            echo "[$origMove] $color move: Kingside castle\n";
             $this->pieces[$color]['K'][0]->position = 'g'.($color=='W'?1:8);
             $this->pieces[$color]['R'][1]->position = 'f'.($color=='W'?1:8);
         } else if($move == 'O-O-O') {
-            echo "$color move: Queenside castle\n";
+            echo "[$origMove] $color move: Queenside castle\n";
             $this->pieces[$color]['K'][0]->position = 'c'.($color=='W'?1:8);
             $this->pieces[$color]['R'][0]->position = 'd'.($color=='W'?1:8);
         } else {
             $take = !!strstr($move, 'x'); // Was a take?
             if($take) $move = str_replace('x', '', $move);
             
+            $from  = '';
+            $lMove = strlen($move);
+            
             $target = substr($move, -2);
-            $type   = substr($move, 0, -2);
-            if(empty($type)) $type = 'P';
+            if($lMove == 2) $type = 'P';
+            else {
+                $type = $move[0];
+                if($type >= 'a' && $type <= 'h') {
+                    $from = $type;
+                    $type = 'P';
+                } else if($lMove == 4) {
+                    $from = $move[1];
+                }
+            }
             
             if($take) {
                 // Remove opponents piece
                 $oColor = ($color=='W') ? 'B' : 'W';
-                list($piece,$idx) = $this->getPieceAt($target, $oColor);
                 
+                $piece = $this->getPieceAt($target, $oColor);
                 if(!$piece) {
                     throw new Exception('Unable to find piece on target of taking');
                 }
                 
-                unset($this->pieces[$oColor][$piece->type][$idx]);
-                echo "$color take: takes $oColor $piece->type [$idx]\n";
+                unset($this->pieces[$oColor][$piece->type][$piece->index]);
+                $take = "taking $oColor $piece->type [$piece->index]\n";
             }
-            
-            list($piece,$idx) = $this->getPieceAt(null, $color, $type, $target, $take);
+
+            echo "[$origMove] $color move: $type to $target $take\n";
+            $piece = $this->getPieceToMove($color, $type, $target, $take, $from);
             if(!$piece) {
                 throw new Exception('Unable to find piece to move');
             }
             
-            echo "$color move: $type to $target\n";
-            $this->pieces[$color][$type][$idx]->position = $target;
+            $this->pieces[$color][$type][$piece->index]->position = $target;
         }
         
         if($color == 'B') echo "\n";
