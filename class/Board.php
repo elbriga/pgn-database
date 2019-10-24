@@ -89,36 +89,40 @@ class Board {
         }
         
         $tot = count($pieceAble);
-        if($tot == 1)  return $pieceAble[0];
-        else if(!$tot) return null;
-        else {
+        if($tot == 1)  {
+            return $pieceAble[0];
+        } else if(!$tot) {
+            throw new Exception('Unable to find piece to move 1');
+        } else {
             if($debug) echo "\n--*******************>>> $tot pieces can move [h:$hint]!\n";
 
-            $tiePiece = null;
+            $tiePiece = [];
             foreach($pieceAble as $piece) {
                 if($debug) echo "--*******************>>> $piece->type at $piece->position [d:$piece->distanceMoved]\n";
                 
                 if(empty($hint)) {
                     // Choose wich seeing if there are other pieces on the way
                     if($piece->canMoveThrought($targetPosition, $this)) {
-                        if($tiePiece) {
-                            // TODO :: check for pinned pieces
-                            throw new Exception('2 pieces can move!', 10);
-                        }
-                        $tiePiece = $piece;
+                        $tiePiece[] = $piece;
                     }
                 } else if(strstr($piece->position, $hint)) {
-                    $tiePiece = $piece;
+                    $tiePiece[] = $piece;
                 } else {
                     //throw new Exception('???? PGN invalido?');
                 }
             }
             
-            if($tiePiece) {
+            $totTiePieces = count($tiePiece);
+            if($totTiePieces === 1) {
                 if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
+                return $tiePiece[0];
+            } else if(!$totTiePieces) {
+                throw new Exception('Unable to find piece to move 2');
             }
             
-            return $tiePiece;
+            // TODO :: check for pinned pieces
+            throw new Exception('2 pieces can move!', 10);
+            if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position\n";
         }
     }
     
@@ -197,9 +201,6 @@ class Board {
             if($debug) echo "[$origMove] $color move: $type ";
             
             $pieceMove = $this->getPieceToMove($color, $type, $target, $take, $from, $debug);
-            if(!$pieceMove) {
-                throw new Exception('Unable to find piece to move');
-            }
             
             if($debug) echo "from $pieceMove->position to $target";
             $this->movePiece($pieceMove, $target);
