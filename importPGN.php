@@ -8,18 +8,25 @@ include('class/PGN.php');
 // Command line
 $argv = $GLOBALS['argv'];
 if(!isset($argv[1]) || empty($argv[1]) || !file_exists($argv[1])) {
-    echo "Use: importPGN <File.pgn>\n\n";
+    echo "Use: importPGN <File.pgn> [IMP to import] [# macth to debug]\n\n";
     exit(1);
 }
 
-$debug    = !isset($argv[2]) ? 0 : ($argv[2]=='BD' ? true : $argv[2]+0);
-$doImport = (isset($argv[3]) && $argv[3]=='IMP');
+// To import the PGN to the database use "IMP" as 1st command line arg
+$doImport = (isset($argv[2]) && $argv[2]=='IMP');
+
+// Use # of match to debug, or "DB" to debug queries
+$debug    = !isset($argv[3]) ? 0 : ($argv[3]=='DB' ? true : (int)$argv[3]);
 
 if($doImport) {
     $conn = pg_connect("host=vm dbname=chess user=sa_chess password=1234");
     if(!$conn) {
         echo "Error connecting to BD\n\n";
         exit(2);
+    }
+
+    if(Match::checkDB($conn)) {
+        echo "Created tables [match] and [boardstate].\n";
     }
 }
 
