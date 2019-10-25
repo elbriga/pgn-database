@@ -130,16 +130,19 @@ class Board {
         // check for pinned pieces
         $notPinned = [];
         foreach($canMove as $piece) {
-            if($debug) echo "--*******************>>> $piece->type at $piece->position is pinned?\n";
+            if($debug) echo "--*******************>>> $piece->type at $piece->position is pinned? ";
             
             if(!$piece->isPinned($this)) {
+                if($debug) echo "No!\n";
                 $notPinned[] = $piece;
+            } else {
+                if($debug) echo "YES!\n";
             }
         }
         
         $totNotPinnedPieces = count($notPinned);
         if($totNotPinnedPieces === 1) {
-            $tiePiece = $totNotPinnedPieces[0];
+            $tiePiece = $notPinned[0];
             if($debug) echo "--***** CHOOSE ******>>> $tiePiece->type at $tiePiece->position unpinned\n";
             return $tiePiece;
         } else if(!$totNotPinnedPieces) {

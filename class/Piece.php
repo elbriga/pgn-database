@@ -133,10 +133,6 @@ class Piece {
 
         $type = ($pieceType === null) ? $this->type : $pieceType;
         switch($type) {
-            case 'N': // kNight
-            case 'K': // King
-                return true;
-
             case 'P': // Pawn
                 // initial 2 steps pawn move
                 if($board->getPieceAt($col . ($this->color=='W' ? 3 : 6))) {
@@ -163,7 +159,7 @@ class Piece {
                             return false;
                         }
                     }
-                } else {
+                } else if($this->position[1] == $row) {
                     // Moving horizontally
                     $step = ($col > $this->position[0]) ? 1 : -1;
                     for($c=self::asciisum($this->position[0], $step); $c!=$col; $c = self::asciisum($c, $step)) {
@@ -171,6 +167,8 @@ class Piece {
                             return false;
                         }
                     }
+                } else {
+                    return false;
                 }
                 return true;
                 
@@ -184,6 +182,11 @@ class Piece {
                     return true;
                 }
                 break;
+                
+            // Should never get here, because distanceMoved for those 2 are always 1
+            case 'N': // kNight
+            case 'K': // King
+                return true;
         }
         
         return false;
@@ -196,6 +199,8 @@ class Piece {
      * @return boolean
      */
     public function isCheking(Piece $king, Board $board) {
+        if($this->type == 'K') return false; // Kings never check!
+        
         return $this->canMoveTo($king->position, true) && $this->canMoveThrought($king->position, $board);
     }
     
@@ -205,17 +210,13 @@ class Piece {
      * @return boolean
      */
     public function isPinned(Board $board) {
-        $otherColor = ($this->color == 'W') ? 'B' : 'W';
-        
         // Calculate total checks WITH the piece on the board
-        $totChecksW = $board->totalChecks($otherColor);
-        
+        $totChecksW = $board->totalChecks($this->color);
+
         // Calculate total checks WITHOUT the piece on the board
-        $boardAux = clone $board;
-        $boardAux->removePiece($this);
-        $totChecksWO = $boardAux->totalChecks($otherColor);
-        
-echo "------------------------ W:$totChecksW WO:$totChecksWO\n";
+        $boardWO = clone $board;
+        $boardWO->removePiece($this);
+        $totChecksWO = $boardWO->totalChecks($this->color);
         
         // if totWO > totW the piece is pinned!
         return ($totChecksWO > $totChecksW);

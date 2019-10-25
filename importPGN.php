@@ -32,13 +32,16 @@ echo ($doImport ? "Importing " : 'Checking ').count($matches)." matches\n\n";
 
 // Importing
 $numMatch = 0;
+$numError = 0;
 while(($match = array_shift($matches))) {
     $numMatch++;
     
     try {
         $match->play(($debug === true || $numMatch == $debug));
     } catch(Exception $e) {
+        $numError++;
         echo "-- !!! Skiping Match $numMatch :: ".$e->getMessage()." :: !!!\n";
+        if($numMatch == $debug) die();
         continue;
     }
     
@@ -53,7 +56,7 @@ while(($match = array_shift($matches))) {
         pg_query($conn, 'BEGIN');
         
         $sqlMatch = $match->getInsertSQL();
-        if($debug == 2) echo "SQLmatch: $sqlMatch\n";
+        if($debug === true) echo "SQLmatch: $sqlMatch\n";
         $res = pg_query($conn, $sqlMatch . ' RETURNING id');
         if(!$res) {
             echo "-- !!! Skiping Match $numMatch :: DB failure :: !!!\n";
@@ -64,7 +67,7 @@ while(($match = array_shift($matches))) {
         
         foreach($match->getStates() as $state) {
             $sqlState = $state->getInsertSQL($idMatchBD);
-            if($debug == 2) echo "SQLstate: $sqlState\n";
+            if($debug === true) echo "SQLstate: $sqlState\n";
             $res = pg_query($conn, $sqlState);
             if(!$res) {
                 echo "-- !!! Skiping Match $numMatch :: DB failure 2 :: !!!\n";
@@ -76,6 +79,12 @@ while(($match = array_shift($matches))) {
         echo "OK!\n";
         pg_query($conn, 'COMMIT');
     }
+}
+
+if($numError) {
+    echo "\nFound $numError macthes with errors!\n\n";
+} else {
+    echo "\nAll matches OK!\n\n";
 }
 
 exit(0);
