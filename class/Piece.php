@@ -4,6 +4,7 @@ class Piece {
     public $position;
     public $index;
     public $distanceMoved; // on the last move attempt
+    public $typeCanMove;   // on the last canMove Queen attempt
     
     private static function asciisum($leter, $add) {
         return chr(ord($leter) + $add);
@@ -77,6 +78,7 @@ class Piece {
                         ($this->position == self::asciisum($col,    $step) . ($row + $step)) ||
                         ($this->position == self::asciisum($col, -1*$step) . ($row + $step))
                         ) {
+                            if($pieceType) $this->typeCanMove = 'B'; // Queen case, storing for latter
                             return $step;
                         }
                 }
@@ -90,6 +92,7 @@ class Piece {
                         ($this->position == self::asciisum($col,    $step) . $row) ||
                         ($this->position == self::asciisum($col, -1*$step) . $row)
                         ) {
+                            if($pieceType) $this->typeCanMove = 'R'; // Queen case, storing for latter
                             return $step;
                         }
                 }
@@ -173,12 +176,8 @@ class Piece {
                 return true;
                 
             case 'Q': // Queen
-                if($this->__canMoveThrought($targetPosition, $board, 'B')) {
-                    // Queen can move as a Bishop!
-                    return true;
-                }
-                if($this->__canMoveThrought($targetPosition, $board, 'R')) {
-                    // Queen can move as a Rook!
+                // use the 'typeCanMove' setted on "canMove()" to not test for other cases
+                if($this->__canMoveThrought($targetPosition, $board, $this->typeCanMove)) {
                     return true;
                 }
                 break;
