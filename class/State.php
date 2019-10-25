@@ -16,8 +16,12 @@ class State {
     
     public function __toString() {
         $ret = '';
-        for($l=0; $l<8; $l++) {
-            $ret .= substr($this->state, $l*8, 8)."\n";
+        for($l=0; $l < 8; $l++) {
+            for($c=0; $c < 8; $c++) {
+                $ret .= $this->state[($l * 8) + $c];
+                if($c != 7) $ret .= ' ';
+            }
+            $ret .= "\n";
         }
         return $ret;
     }
