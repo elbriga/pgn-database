@@ -30,6 +30,8 @@ class Match {
     }
     
     public function play($debug=false) {
+        if($debug) echo "moves: $this->moves\n\n";
+        
         // Proccess $moves
         $moves  = array_filter(explode(' ', $this->moves));
         $result = array_pop($moves);
@@ -72,11 +74,11 @@ class Match {
     /**
      * Check if this Match is already on DB
      * @param resource $conn
-     * @return boolean
+     * @return integer ID of dup match
      */
     public function existsOnDB($conn) {
-        $res = pg_query($conn, "SELECT COUNT(id) FROM match WHERE moves = '$this->moves'");
-        return (pg_fetch_array($res)[0] > 0);
+        $res = pg_query($conn, "SELECT id FROM match WHERE event='$this->event' AND white='$this->white' AND black='$this->black' AND moves='$this->moves'");
+        return pg_fetch_array($res)[0];
     }
     
     public function __toString() {
