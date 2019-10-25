@@ -28,9 +28,14 @@ class PGN {
         $moves = '';
 
         // Parse the file
+        $pastLin = '';
         while($lin = fgets($fp)) {
             if($lin == "\n" || $lin == "\r\n") {
                 // blank line
+                if($pastLin == "\n" || $pastLin == "\r\n") {
+                    // Ignore duplicatet blanks
+                    continue;
+                }
                 $state = 1 - $state;
                 if(!$state) {
                     $matches[] = new Match($heads, $moves);
@@ -40,12 +45,16 @@ class PGN {
                 }
             } else if(!$state) {
                 // header
+                if(!strstr($lin, '"')) {
+                    throw new Exception("Invalid header [$lin]");
+                }
                 list($ch,$vl) = explode('"', $lin);
                 $heads[substr(strtolower($ch), 1, -1)] = $vl;
             } else {
                 // match
                 $moves .= str_replace(["\r", "\n"], '', $lin) . ' ';
             }
+            $pastLin = $lin;
         }
         
         return $matches;
