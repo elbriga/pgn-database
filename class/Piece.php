@@ -22,14 +22,15 @@ class Piece {
      * @return integer distance moved (0 = cant move!)
      */
     public function canMoveTo($targetPosition, $taking) {
-        return ($this->distanceMoved = $this->__canMoveTo($targetPosition, $taking));
+        return ($this->distanceMoved = $this->__canMoveTo($targetPosition, $taking, null));
     }
     
-    private function __canMoveTo($targetPosition, $taking) {
+    private function __canMoveTo($targetPosition, $taking, $pieceType=null) {
         $col = $targetPosition[0]; // leter
         $row = $targetPosition[1]; // number
 
-        switch($this->type) {
+        $type = ($pieceType === null) ? $this->type : $pieceType;
+        switch($type) {
             case 'P': // Pawn
                 $direction = ($this->color == 'W') ? -1 : 1;
                 if($taking) {
@@ -46,7 +47,7 @@ class Piece {
                     if($this->position == $col . ($row + $direction)) {
                         return 1;
                     }
-                    // inital 2 steps pawn move
+                    // initial 2 steps pawn move
                     if((($this->color=='W' && $row==4) || ($this->color=='B' && $row==5)) && $this->position == $col . ($row + ($direction * 2))) {
                         return 2;
                     }
@@ -64,7 +65,7 @@ class Piece {
                     ($this->position == self::asciisum($col,  2) . ($row + 1)) ||
                     ($this->position == self::asciisum($col,  1) . ($row + 2))
                 ) {
-                    return 3;
+                    return 1; // Consider distance 1 to all knight's moves for canMoveThrought to work
                 }
                 break;
                 
@@ -95,20 +96,13 @@ class Piece {
                 break;
 
             case 'Q': // Queen
-                for($step=1; $step<8; $step++) {
-                    if(
-                        ($this->position == self::asciisum($col, -1*$step) . ($row - $step)) || // Diagonal
-                        ($this->position == self::asciisum($col,    $step) . ($row - $step)) ||
-                        ($this->position == self::asciisum($col,    $step) . ($row + $step)) ||
-                        ($this->position == self::asciisum($col, -1*$step) . ($row + $step)) ||
-                        
-                        ($this->position == $col . ($row + $step)) || // Vertical
-                        ($this->position == $col . ($row - $step)) ||
-                        ($this->position == self::asciisum($col,    $step) . $row) || // Horizontal
-                        ($this->position == self::asciisum($col, -1*$step) . $row)
-                        ) {
-                            return $step;
-                        }
+                if(($step = $this->__canMoveTo($targetPosition, $taking, 'B')) > 0) {
+                    // Queen can move as a Bishop!
+                    return $step;
+                }
+                if(($step = $this->__canMoveTo($targetPosition, $taking, 'R')) > 0) {
+                    // Queen can move as a Rook!
+                    return $step;
                 }
                 break;
 
@@ -128,23 +122,39 @@ class Piece {
      * @return boolean
      */
     public function canMoveThrought($targetPosition, Board $board) {
+        return $this->__canMoveThrought($targetPosition, $board, null);
+    }
+    
+    private function __canMoveThrought($targetPosition, Board $board, $pieceType=null) {
+        if($this->distanceMoved === 1) return true;
+        
         $col = $targetPosition[0]; // leter
         $row = $targetPosition[1]; // number
 
-        switch($this->type) {
+        $type = ($pieceType === null) ? $this->type : $pieceType;
+        switch($type) {
             case 'N': // kNight
             case 'K': // King
                 return true;
 
             case 'P': // Pawn
-                return ($this->distanceMoved === 1);
+                // initial 2 steps pawn move
+                if($board->getPieceAt($col . ($this->color=='W' ? 3 : 6))) {
+                    return false;
+                }
+                return true;
                 
             case 'B': // Bishop
-                if($this->distanceMoved === 1) return true;
-                break;
+                $stepC = ($col > $this->position[0]) ? 1 : -1;
+                $stepR = ($row > $this->position[1]) ? 1 : -1;
+                for($d=1; $d<$this->distanceMoved; $d++) {
+                    if($board->getPieceAt(self::asciisum($this->position[0], ($d * $stepC)) . ($this->position[1] + ($d * $stepR)))) {
+                        return false;
+                    }
+                }
+                return true;
                 
             case 'R': // Rook
-                if($this->distanceMoved === 1) return true;
                 if($this->position[0] == $col) {
                     // Moving vertically
                     $step = ($row > $this->position[1]) ? 1 : -1;
@@ -165,11 +175,28 @@ class Piece {
                 return true;
                 
             case 'Q': // Queen
-                if($this->distanceMoved === 1) return true; // TODO
+                if($this->__canMoveThrought($targetPosition, $board, 'B')) {
+                    // Queen can move as a Bishop!
+                    return true;
+                }
+                if($this->__canMoveThrought($targetPosition, $board, 'R')) {
+                    // Queen can move as a Rook!
+                    return true;
+                }
                 break;
         }
         
         return false;
+    }
+    
+    /**
+     * check if this piece is checking the King
+     * @param Piece $king
+     * @param Board $board
+     * @return boolean
+     */
+    public function isCheking(Piece $king, Board $board) {
+        return $this->canMoveTo($king->position, true) && $this->canMoveThrought($king->position, $board);
     }
     
     /**
@@ -186,7 +213,9 @@ class Piece {
         // Calculate total checks WITHOUT the piece on the board
         $boardAux = clone $board;
         $boardAux->removePiece($this);
-        $totChecksWO = $boardAux->totalChecks($otherColor)                            + 1; // TODO!
+        $totChecksWO = $boardAux->totalChecks($otherColor);
+        
+echo "------------------------ W:$totChecksW WO:$totChecksWO\n";
         
         // if totWO > totW the piece is pinned!
         return ($totChecksWO > $totChecksW);

@@ -272,9 +272,18 @@ class Board {
      * @param string $color
      */
     public function totalChecks($color) {
-        $otherColor = ($color == 'W') ? 'B' : 'W';
+        $total = 0;
+        $king  = $this->pieces[$color]['K'][0];
         
-        // TODO!
-        return 0;
+        $otherColor = ($color == 'W') ? 'B' : 'W';
+        foreach($this->pieces[$otherColor] as $pieces) {
+            foreach($pieces as $piece) {
+                if($piece->isCheking($king, $this)) {
+                    $total++;
+                }
+            }
+        }
+        
+        return $total;
     }
 }
