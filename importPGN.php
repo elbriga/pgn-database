@@ -48,18 +48,19 @@ while(($match = array_shift($matches))) {
     if($doImport) {
         // Check if is duplicate
         if($match->existsOnDB($conn)) {
-            echo "-- !!! Skiping Match $numMatch :: Already one like this on DB :: !!!\n";
+            echo "!!! Skiping Match $numMatch :: Already one like this on DB :: !!!\n";
             continue;
         }
         
-        echo "-- Importing Match $numMatch :: ".$match->getTotalMoves()." moves: ";
+        echo "> Importing Match $numMatch :: ".$match->getTotalMoves()." moves: ";
         pg_query($conn, 'BEGIN');
         
         $sqlMatch = $match->getInsertSQL();
         if($debug === true) echo "SQLmatch: $sqlMatch\n";
         $res = pg_query($conn, $sqlMatch . ' RETURNING id');
         if(!$res) {
-            echo "-- !!! Skiping Match $numMatch :: DB failure :: !!!\n";
+            echo "!!! Skiping Match $numMatch :: DB failure :: !!!\n";
+            echo "Match:\n$match\n";
             pg_query($conn, 'ROLLBACK');
             continue;
         }
@@ -70,7 +71,7 @@ while(($match = array_shift($matches))) {
             if($debug === true) echo "SQLstate: $sqlState\n";
             $res = pg_query($conn, $sqlState);
             if(!$res) {
-                echo "-- !!! Skiping Match $numMatch :: DB failure 2 :: !!!\n";
+                echo "!!! Skiping Match $numMatch :: DB failure 2 :: !!!\n";
                 pg_query($conn, 'ROLLBACK');
                 continue 2;
             }

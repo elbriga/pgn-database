@@ -1,7 +1,7 @@
 <?php
 class Match {
-    private $headersToSave = ['event', 'site', 'white', 'black', 'result', 'whiteelo', 'blackelo'];
-    private $event, $site;
+    private $headersToSave = ['event', 'date', 'site', 'white', 'black', 'result', 'whiteelo', 'blackelo'];
+    private $event, $date, $site;
     private $white, $black, $result;
     private $whiteelo, $blackelo;
     
@@ -22,8 +22,8 @@ class Match {
         else                                  $this->result = 3;
         unset($headers['result']);
         
-        if(empty($this->whiteelo)) $this->whiteelo = 0;
-        if(empty($this->blackelo)) $this->blackelo = 0;
+        $this->whiteelo = (int)$this->whiteelo;
+        $this->blackelo = (int)$this->blackelo;
         
         $this->moves  = trim($moves);
         $this->states = [];
@@ -61,12 +61,12 @@ class Match {
     }
     
     public function getInsertSQL() {
-        $sql  = "INSERT INTO match(moves,".implode(',', $this->headersToSave).") VALUES ('$this->moves','";
+        $sql  = "INSERT INTO match(totmoves,moves,".implode(',', $this->headersToSave).") VALUES (".$this->getTotalMoves().", '$this->moves' ,'";
         $vals = [];
         foreach($this->headersToSave as $atrName) {
-            $vals[] = $this->$atrName;
+            $vals[] = str_replace("'", "''", utf8_encode($this->$atrName)); // To UTF and Escape the "'"
         }
-        return $sql . implode("','", $vals) . "')";
+        return $sql . implode("', '", $vals) . "')";
     }
 
     /**
@@ -77,5 +77,16 @@ class Match {
     public function existsOnDB($conn) {
         $res = pg_query($conn, "SELECT COUNT(id) FROM match WHERE moves = '$this->moves'");
         return (pg_fetch_array($res)[0] > 0);
+    }
+    
+    public function __toString() {
+        return "[    event: $this->event ]\n".
+               "[     date: $this->date ]\n".
+               "[     site: $this->site ]\n".
+               "[    white: $this->white ]\n".
+               "[    black: $this->black ]\n".
+               "[   result: $this->result ]\n".
+               "[ whiteelo: $this->whiteelo ]\n".
+               "[ blackelo: $this->blackelo ]\n";
     }
 }

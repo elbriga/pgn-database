@@ -2,7 +2,9 @@
 CREATE TABLE match (
 	id       serial PRIMARY KEY,
 	moves    text,
+	totmoves integer,
 	event    text,
+	date     text,
 	site     text,
 	white    text,
 	black    text,
