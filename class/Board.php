@@ -37,7 +37,12 @@ class Board {
     }
     
     private function addPiece(Piece $piece) {
-        $piece->index = @count($this->pieces[$piece->color][$piece->type]);
+        if(!isset($this->pieces[$piece->color][$piece->type]) || empty($this->pieces[$piece->color][$piece->type])) {
+            $piece->index = 0;
+        } else {
+            $ks = array_keys($this->pieces[$piece->color][$piece->type]);
+            $piece->index = array_pop($ks) + 1;
+        }
         
         $this->pieces[$piece->color][$piece->type][$piece->index] = $piece;
     }
@@ -150,24 +155,6 @@ class Board {
         }
         
         throw new Exception($totNotPinnedPieces.' pieces can move!', 10);
-    }
-    
-    public function dumpState() {
-        $state = '';
-        for($row=8; $row>0; $row--) {
-            for($col='a'; $col<='h'; $col++) {
-                $piece = $this->getPieceAt($col.$row);
-                if(!$piece) {
-                    $char = '#';
-                } else if($piece->color == 'B') {
-                    $char = strtolower($piece->type);
-                } else {
-                    $char = $piece->type;
-                }
-                $state .= $char;
-            }
-        }
-        return $state;
     }
     
     public function move($move, $debug) {

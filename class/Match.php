@@ -45,7 +45,7 @@ class Match {
         foreach($moves as $move) {
             $board->move($move, $debug);
             
-            $state = new State($numMove, $move, $board->dumpState());
+            $state = new State($numMove, $move, $board);
             if($debug) echo "$state\n";
             
             $numMove += $isWhite ? 1 : 9; // create a sequence like: 11,12,21,22,31,32,...
@@ -77,7 +77,10 @@ class Match {
      * @return integer ID of dup match
      */
     public function existsOnDB($conn) {
-        $res = pg_query($conn, "SELECT id FROM match WHERE event='$this->event' AND white='$this->white' AND black='$this->black' AND moves='$this->moves'");
+        $eventBD = str_replace("'", "''", $this->event);
+        $whiteBD = str_replace("'", "''", $this->white);
+        $blackBD = str_replace("'", "''", $this->black);
+        $res = pg_query($conn, "SELECT id FROM match WHERE event='$eventBD' AND white='$whiteBD' AND black='$blackBD' AND moves='$this->moves'");
         return pg_fetch_array($res)[0];
     }
     
@@ -111,6 +114,8 @@ CREATE TABLE boardstate (
 	origmove text,
 	state    text
 );
+
+CREATE INDEX idx_state ON boardstate (state);
 ");
             return true;
         }

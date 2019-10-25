@@ -4,10 +4,25 @@ class State {
     private $originatingMove;
     private $state;
     
-    public function __construct($numMove, $originatingMove, $state) {
+    public function __construct($numMove, $originatingMove, Board $board) {
         $this->numMove         = $numMove;
         $this->originatingMove = $originatingMove;
-        $this->state           = $state;
+        
+        // Generate state string from board
+        $this->state = '';
+        for($row=8; $row>0; $row--) {
+            for($col='a'; $col<='h'; $col++) {
+                $piece = $board->getPieceAt($col.$row);
+                if(!$piece) {
+                    $char = '#';
+                } else if($piece->color == 'B') {
+                    $char = strtolower($piece->type);
+                } else {
+                    $char = $piece->type;
+                }
+                $this->state .= $char;
+            }
+        }
     }
     
     public function getInsertSQL($idMatch) {
