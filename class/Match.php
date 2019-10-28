@@ -107,6 +107,10 @@ CREATE TABLE match (
 	whiteelo smallint,
 	blackelo smallint
 );
+CREATE INDEX idx_match_event ON match (event);
+CREATE INDEX idx_match_white ON match (white);
+CREATE INDEX idx_match_black ON match (black);
+CREATE INDEX idx_match_moves ON match (moves);
 
 CREATE TABLE boardstate (
 	idmatch  integer REFERENCES match(id),
@@ -114,7 +118,6 @@ CREATE TABLE boardstate (
 	origmove text,
 	state    text
 );
-
 CREATE INDEX idx_state ON boardstate (state);
 ");
             return true;
