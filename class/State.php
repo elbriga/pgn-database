@@ -8,33 +8,44 @@ class State {
         $this->numMove         = $numMove;
         $this->originatingMove = $originatingMove;
         
-        // Generate state string from board
-        $this->state = '';
+        // Generate FEN string from board
+        $blanks = 0;
+        $lines  = [];
+        $line   = '';
         for($row=8; $row>0; $row--) {
             for($col='a'; $col<='h'; $col++) {
                 $piece = $board->getPieceAt($col.$row);
                 if(!$piece) {
-                    $char = '#';
-                } else if($piece->color == 'B') {
-                    $char = strtolower($piece->type);
+                    $blanks++;
                 } else {
-                    $char = $piece->type;
+                    if($blanks > 0) {
+                        $line  .= $blanks;
+                        $blanks = 0;
+                    }
+                    $line .= ($piece->color == 'B') ? strtolower($piece->type) : $piece->type;
                 }
-                $this->state .= $char;
             }
+            if($blanks > 0) {
+                $line  .= $blanks;
+                $blanks = 0;
+            }
+            $lines[] = $line;
+            $line    = '';
         }
+        
+        $this->state = implode('/', $lines);
     }
     
     public function getInsertSQL($idMatch) {
-        return "INSERT INTO boardstate(idmatch,nummove,origmove,state) VALUES ($idMatch, $this->numMove, '$this->originatingMove', '$this->state')";
+        $move = strstr($this->originatingMove, '.') ? explode('.', $this->originatingMove)[1] : $this->originatingMove;
+        return "INSERT INTO boardstate(idmatch,nummove,origmove,state) VALUES ($idMatch, $this->numMove, '$move', '$this->state')";
     }
     
     public function __toString() {
-        $ret = '';
-        for($l=0; $l < 8; $l++) {
-            for($c=0; $c < 8; $c++) {
-                $ret .= $this->state[($l * 8) + $c];
-                if($c != 7) $ret .= ' ';
+        $ret = $this->state . ":\n";
+        foreach(explode('/', $this->state) as $line) {
+            for($c=0; $c < strlen($line); $c++) {
+                $ret .= is_numeric($line[$c]) ? str_repeat('# ', $line[$c]) : $line[$c].' ';
             }
             $ret .= "\n";
         }
